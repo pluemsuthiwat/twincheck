@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+/* Palette taken from the app icon: navy #12253F, white, amber #FDAF22, blue #4FA3FF. */
+:root {
+  --bg: #f3f6fa;
+  --surface: #ffffff;
+  --surface-2: #eef2f7;
+  --line: #dbe3ee;
+  --ink: #12253f;
+  --muted: #5d6d84;
+  --brand: #12253f;
+  --accent: #fdaf22;
+  --side-a: #6b7c93;
+  --side-b: #2f80ed;
+  --add: #15803d;
+  --add-bg: #e6f5eb;
+  --del: #c0392b;
+  --del-bg: #fdecea;
+  --mod: #a16207;
+  --mod-bg: #fff3d6;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1626;
+    --surface: #12233b;
+    --surface-2: #182d4a;
+    --line: #25405f;
+    --ink: #e6edf6;
+    --muted: #93a3b8;
+    --side-a: #c8d3e0;
+    --side-b: #4fa3ff;
+    --add: #4ade80;
+    --add-bg: rgb(74 222 128 / 0.12);
+    --del: #f87171;
+    --del-bg: rgb(248 113 113 / 0.12);
+    --mod: #fdaf22;
+    --mod-bg: rgb(253 175 34 / 0.13);
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  --color-accent: var(--accent);
+  --color-side-a: var(--side-a);
+  --color-side-b: var(--side-b);
+  --color-add: var(--add);
+  --color-add-bg: var(--add-bg);
+  --color-del: var(--del);
+  --color-del-bg: var(--del-bg);
+  --color-mod: var(--mod);
+  --color-mod-bg: var(--mod-bg);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Sukhumvit Set", "Noto Sans Thai", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}

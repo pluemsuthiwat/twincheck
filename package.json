@@ -1,0 +1,22 @@
+{
+  "name": "twincheck",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter @twincheck/web dev",
+    "build": "pnpm --filter @twincheck/web build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json && tsc -p apps/web/tsconfig.json",
+    "app:dev": "pnpm --filter @twincheck/desktop dev",
+    "app:build": "pnpm --filter @twincheck/desktop build"
+  },
+  "devDependencies": {
+    "@twincheck/core": "workspace:*",
+    "@twincheck/format-xml": "workspace:*",
+    "@twincheck/profile-clearpass": "workspace:*",
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2",
+    "vitest": "^5.1.0"
+  }
+}
