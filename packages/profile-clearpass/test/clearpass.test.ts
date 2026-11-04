@@ -25,8 +25,7 @@ describe("ClearPass profile", () => {
     expect(changes).toHaveLength(1);
     const [{ node, trail }] = changes;
     expect(node).toMatchObject({ status: "added", kind: "Rule", pos: { b: 3 } });
-    expect(node.label).toContain("SSO-SP EQUALS q123");
-    expect(node.label).toContain("[Allow Access Profile]");
+    expect(node.label).toBe("Rule 3: IF Application:SSO-SP EQUALS q123 THEN Enforcement-Profile = [Allow Access Profile]");
     expect(trail.map((t) => t.label)).toEqual([
       "Enforcement Policies",
       "SUTHIWAT-DOT1X-ENFORCEMENT-POLICY",

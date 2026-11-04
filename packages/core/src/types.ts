@@ -30,6 +30,8 @@ export interface DiffNode {
   name: string;
   /** Human-readable label, e.g. the object's configured name. */
   label: string;
+  /** A's label, only when it differs from `label` (which is B's for matched nodes). */
+  labelA?: string;
   /** Human-readable type, e.g. "Enforcement Policy". */
   kind: string;
   status: DiffStatus;

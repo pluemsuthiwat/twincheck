@@ -1,0 +1,34 @@
+# Changelog
+
+## 1.0.0 — 2026-11-05
+
+เวอร์ชันแรกที่ออกเป็นแอป desktop
+
+### หน้าความแตกต่าง
+- หน้า Overview จัดเป็นหมวด → Changed / Only in B / Only in A → การ์ดละ object พร้อมค่า `เดิม → ใหม่` ในบรรทัดเดียว กล่องตัวเลขด้านบนกดเป็นตัวกรองได้
+- ตาราง `Field | A | B` และ `# | A | B` แบบเดียวกันทุกที่ (ดูมาตรฐานใน README หัวข้อ "อ่านหน้าความแตกต่าง")
+- Auth Source: ค่า NVPair (timeout, server, port, …) รวมเป็นตาราง A | B ตารางเดียว
+- Auth Method / Auth Source / Authorization Source ใน service: ตาราง A | B แถวละรายการ
+- เงื่อนไข ผลลัพธ์ และ attribute ของ profile แสดงเป็น field (type / name / operator / value)
+- RuleList แสดงแถวละ Rule สรุปเป็น `IF … THEN Role = …` กดแถวเพื่อดู Rule ทั้งข้อ (เงื่อนไข + ผลลัพธ์ ไม่ซ่อนส่วนที่ไม่เปลี่ยน)
+- Rule ที่สลับลำดับแสดงตามตำแหน่งจริงของแต่ละไฟล์ (ไขว้กัน) และทำสีเหลือง
+- เงื่อนไขแสดงที่มาของค่า เช่น `Authorization:PLUEM-ZNC-AD:memberOf`, `Endpoint:Zone`
+- เงื่อนไขของ Rule ใช้ชื่อ "Rule Condition (MATCHES_ALL)" เหมือน "Service Rule (MATCHES_ALL)" ของ service
+- element ห่อที่ไม่มีชื่อเป็นหัวข้อเล็ก ไม่ซ้อนเป็นกล่อง
+- field เรียงตามลำดับใน XML เสมอ
+- หัวหมวดใหญ่ใช้ไอคอนโฟลเดอร์สีน้ำเงิน แยกจากสีสถานะ; ไม่มีแถบสีด้านซ้ายของกล่อง
+- ค่า secret ที่ฝังอยู่ในชื่อรายการถูก mask ด้วย (sidebar, Overview, รายละเอียด)
+
+### การนับและ engine
+- ตัวเลข `+ − ~` ทุกที่นับแบบเดียวกัน: จุดที่เปลี่ยนทุกชั้นข้างใน แถวแม่ = ผลรวมแถวลูก, แถว Only in A/B แสดง `−1`/`+1`
+- แก้หลาย field ใน element เดียว (เช่น `value` + `displayValue`) นับเป็น 1
+- Rule ที่แค่ย้ายตำแหน่งตรวจเป็น "Moved" แทนลบแล้วเพิ่ม
+- engine เก็บชื่อฝั่ง A (`labelA`) เมื่อต่างจากฝั่ง B
+
+### แอป
+- `npm run dev` / `pnpm dev` เปิดแอป desktop (Tauri); โหมดเว็บย้ายไป `pnpm web:dev`
+- เลขเวอร์ชันเก็บที่ `package.json` ที่ root ที่เดียว (หน้าแอปและตัวติดตั้งอ่านจากที่นี่)
+- หน้า About: เวอร์ชัน, copyright, ข้อความ MIT License ฉบับเต็ม, ปุ่ม Check for updates
+- เช็กอัปเดตอัตโนมัติจาก GitHub Releases (Tauri updater, ไฟล์อัปเดตต้องมีลายเซ็น) พร้อมกล่องแจ้งเตือน "Update & restart"
+- GitHub Actions `release.yml`: push tag `v*` → build macOS + Windows → draft release พร้อม `latest.json`
+- MIT License

@@ -37,18 +37,23 @@ function descendants(n: TNode, name: string, out: TNode[] = []): TNode[] {
   return out;
 }
 
-const condition = (n: TNode) => `${attr(n, "name")} ${attr(n, "operator")} ${n.attrs.displayValue ?? attr(n, "value")}`;
+/** "Authorization:PLUEM-ZNC-AD:memberOf CONTAINS Network": the type says where the value comes from, as ClearPass shows it. */
+const condition = (n: TNode) => {
+  const source = n.attrs.type ? `${n.attrs.type}:` : "";
+  return `${source}${attr(n, "name")} ${attr(n, "operator")} ${n.attrs.displayValue ?? attr(n, "value")}`;
+};
 
-/** "Rule 3: SSO-SP EQUALS q123 → [Allow Access Profile]" */
+/** "Rule 3: IF SSO-SP EQUALS q123 THEN Enforcement-Profile = [Allow Access Profile]" */
 function ruleLabel(n: TNode, pos: number): string {
   const cond = n.children.find((c) => c.name === "Condition");
   const expr = cond && descendants(cond, "Expression")[0];
   const joiner = expr?.attrs.operator === "OR" ? " OR " : " AND ";
   const conds = cond ? descendants(cond, "RuleAttribute").map(condition).join(joiner) : "";
+  // Each result names what it sets (Role, Enforcement-Profile, ...), as in the XML.
   const results = descendants(n, "RuleResult")
-    .map((r) => r.attrs.displayValue ?? attr(r, "value"))
+    .map((r) => `${attr(r, "name")} = ${r.attrs.displayValue ?? attr(r, "value")}`)
     .join(", ");
-  return `Rule ${pos}: ${conds || "(no condition)"} → ${results}`;
+  return `Rule ${pos}: IF ${conds || "(always)"} THEN ${results}`;
 }
 
 const rules: ElementRule[] = [
@@ -68,6 +73,8 @@ const rules: ElementRule[] = [
   { match: "**/InnerMethodNames/string", ordered: true, kind: "Inner Method", key: (n) => n.text },
 
   { match: "**/RuleExpression", kind: "Service Rule", label: (n) => `Service Rule (${attr(n, "displayOperator") || attr(n, "operator")})` },
+  // A policy rule's conditions: the same shape as a service rule's, so they are named alike.
+  { match: "**/Rule/Condition/Expression", kind: "Rule Condition", label: (n) => `Rule Condition (${attr(n, "displayOperator") || attr(n, "operator")})` },
   { match: "**/RuleAttribute", kind: "Condition", label: condition },
   { match: "**/RulesCondition", kind: "Condition", label: (n) => `${attr(n, "name")} ${attr(n, "oper")} ${n.attrs.valueDispName ?? attr(n, "value")}` },
   {

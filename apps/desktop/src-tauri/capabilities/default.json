@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Main window. The UI reads files through the webview only; no native APIs are exposed.",
+  "description": "Main window. The UI reads files through the webview; the only native APIs are update check/install and relaunch.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "updater:default", "process:allow-restart"]
 }

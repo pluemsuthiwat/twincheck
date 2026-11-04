@@ -41,17 +41,20 @@ class DiffEngine {
     const text = diffText(a.node.text, b.node.text);
     const children = this.matchChildren(a, b).map((p) => this.diff(p, id));
 
+    // One count per change point (see collectChanges), not per attribute: a value and its
+    // displayValue changing together is one change.
     const stats: DiffStats = { added: 0, removed: 0, modified: 0 };
     for (const c of children) addStats(stats, c.stats);
-    stats.modified += attrs.filter((x) => x.status !== "unchanged").length;
-    if (text?.status === "modified") stats.modified++;
-    if (pair.moved) stats.modified++;
+    if (attrs.some((x) => x.status !== "unchanged") || text?.status === "modified" || pair.moved) stats.modified++;
 
     const changed = stats.added + stats.removed + stats.modified > 0;
+    const label = this.label(b);
+    const labelA = this.label(a);
     return {
       id,
       name: b.node.name,
-      label: this.label(b),
+      label,
+      labelA: labelA !== label ? labelA : undefined,
       kind: rule.kind ?? b.node.name,
       status: changed ? "modified" : "unchanged",
       moved: pair.moved || undefined,
@@ -184,7 +187,10 @@ function bagPairs(as: Item[], bs: Item[], fp: (it: Item) => string): Pair[] {
   return pairs.concat(zipRest(leftA, leftB));
 }
 
-/** Ordered: LCS on content, then items between anchors pair up positionally (= modified). */
+/**
+ * Ordered: LCS on content; identical items left outside it pair up as moves, the rest
+ * pair up positionally within their gap (= modified).
+ */
 function sequencePairs(as: Item[], bs: Item[], fp: (it: Item) => string): Pair[] {
   const n = as.length;
   const m = bs.length;
@@ -199,24 +205,36 @@ function sequencePairs(as: Item[], bs: Item[], fp: (it: Item) => string): Pair[]
     }
   }
   const pairs: Pair[] = [];
-  let gapA: Item[] = [];
-  let gapB: Item[] = [];
+  const gaps: { a: Item[]; b: Item[] }[] = [{ a: [], b: [] }];
   let i = 0;
   let j = 0;
   while (i < n && j < m) {
     if (fa[i] === fb[j]) {
-      pairs.push(...zipRest(gapA, gapB), { a: as[i], b: bs[j] });
-      gapA = [];
-      gapB = [];
-      i++;
-      j++;
+      pairs.push({ a: as[i++], b: bs[j++] });
+      gaps.push({ a: [], b: [] });
     } else if (dp[(i + 1) * w + j] >= dp[i * w + j + 1]) {
-      gapA.push(as[i++]);
+      gaps[gaps.length - 1].a.push(as[i++]);
     } else {
-      gapB.push(bs[j++]);
+      gaps[gaps.length - 1].b.push(bs[j++]);
     }
   }
-  return pairs.concat(zipRest(gapA.concat(as.slice(i)), gapB.concat(bs.slice(j))));
+  gaps[gaps.length - 1].a.push(...as.slice(i));
+  gaps[gaps.length - 1].b.push(...bs.slice(j));
+
+  // The same content removed in one gap and added in another moved; markMoves flags it.
+  const pool = new Map<string, Item[]>();
+  for (const g of gaps) for (const it of g.a) pool.set(fp(it), [...(pool.get(fp(it)) ?? []), it]);
+  const relocated = new Set<Item>();
+  for (const g of gaps) {
+    for (const it of g.b) {
+      const partner = pool.get(fp(it))?.shift();
+      if (!partner) continue;
+      pairs.push({ a: partner, b: it });
+      relocated.add(partner).add(it);
+    }
+  }
+  const rest = (xs: Item[]) => xs.filter((x) => !relocated.has(x));
+  return pairs.concat(gaps.flatMap((g) => zipRest(rest(g.a), rest(g.b))));
 }
 
 function zipRest(as: Item[], bs: Item[]): Pair[] {

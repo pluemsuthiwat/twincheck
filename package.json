@@ -1,9 +1,13 @@
 {
   "name": "twincheck",
+  "version": "1.0.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
+  "packageManager": "pnpm@11.18.0",
   "scripts": {
-    "dev": "pnpm --filter @twincheck/web dev",
+    "dev": "pnpm --filter @twincheck/desktop dev",
+    "web:dev": "pnpm --filter @twincheck/web dev",
     "build": "pnpm --filter @twincheck/web build",
     "test": "vitest run",
     "test:watch": "vitest",

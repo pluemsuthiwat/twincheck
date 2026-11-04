@@ -54,12 +54,40 @@ describe("diffTrees", () => {
     expect(change.trail.at(-1)).toMatchObject({ name: "Rule", pos: { a: 2, b: 2 } });
   });
 
+  it("keeps A's label when it differs from B's", () => {
+    const p: Profile = { id: "t", name: "t", rules: [{ match: "**/Rule", ordered: true, label: (n) => `v=${n.children[0].attrs.v}` }] };
+    const rule = (v: string) => el("Rule", {}, el("Cond", { v }));
+    const d = diffTrees(el("Root", {}, el("List", {}, rule("1"))), el("Root", {}, el("List", {}, rule("2"))), p);
+    expect(d.children[0].children[0]).toMatchObject({ label: "v=2", labelA: "v=1" });
+    const same = diffTrees(el("Root", {}, el("List", {}, rule("1"))), el("Root", {}, el("List", {}, rule("1"))), p);
+    expect(same.children[0].children[0].labelA).toBeUndefined();
+  });
+
   it("flags moves in ordered keyed lists", () => {
     const p: Profile = { id: "t", name: "t", rules: [{ match: "**/string", ordered: true, key: (n) => n.text }] };
     const list = (...xs: string[]) => el("Root", {}, el("List", {}, ...xs.map((x) => el("string", {}, x))));
     const changes = collectChanges(diffTrees(list("a", "b", "c"), list("b", "a", "c"), p));
     expect(changes).toHaveLength(1);
     expect(changes[0].node.moved).toBe(true);
+  });
+
+  it("flags moves in ordered lists without keys instead of remove+add", () => {
+    const rule = (v: string) => el("Rule", {}, el("Cond", { v }));
+    const a = el("Root", {}, el("List", {}, rule("1"), rule("2"), rule("3")));
+    const b = el("Root", {}, el("List", {}, rule("2"), rule("1"), rule("3")));
+    const d = diffTrees(a, b, ordered);
+    const changes = collectChanges(d);
+    expect(changes).toHaveLength(1);
+    expect(changes[0].node).toMatchObject({ status: "modified", moved: true, name: "Rule" });
+    expect(d.stats).toEqual({ added: 0, removed: 0, modified: 1 });
+  });
+
+  it("counts one change per changed node, not per attribute", () => {
+    const a = el("Root", {}, el("Item", { name: "x", value: "1", displayValue: "1" }), el("Item", { name: "y" }));
+    const b = el("Root", {}, el("Item", { name: "x", value: "2", displayValue: "2" }), el("Item", { name: "z" }));
+    const d = diffTrees(a, b, plain);
+    expect(d.stats).toEqual({ added: 1, removed: 1, modified: 1 });
+    expect(d.stats.added + d.stats.removed + d.stats.modified).toBe(collectChanges(d).length);
   });
 
   it("treats order as irrelevant for unordered lists without keys", () => {

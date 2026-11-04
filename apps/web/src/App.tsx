@@ -1,10 +1,13 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { About } from "./components/About";
 import { Detail, Overview, type ViewOptions } from "./components/Detail";
 import { FileSlot, type LoadedFile } from "./components/FileSlot";
 import { Counts } from "./components/Status";
 import { TreeNav } from "./components/TreeNav";
+import { UpdateToast } from "./components/UpdateToast";
 import { PROFILES, type CompareResult } from "./engine";
 import { findTrail, maskXml } from "./lib/tree";
+import { useUpdater } from "./lib/updater";
 import { useCompare } from "./useCompare";
 
 const RawDiff = lazy(() => import("./components/RawDiff"));
@@ -29,6 +32,8 @@ export default function App() {
   const [changesOnly, setChangesOnly] = useState(true);
   const [showSecrets, setShowSecrets] = useState(false);
   const [query, setQuery] = useState("");
+  const [aboutOpen, setAboutOpen] = useState(false);
+  const updater = useUpdater();
 
   useEffect(() => {
     if (!result) return;
@@ -133,6 +138,29 @@ export default function App() {
             ))}
           </select>
         </label>
+        <button
+          type="button"
+          onClick={() => setAboutOpen(true)}
+          title="About TwinCheck: version and license"
+          className="flex items-center gap-1.5 rounded-md border border-white/20 bg-white/10 px-2 py-1 text-xs text-white/80 hover:bg-white/20"
+        >
+          <svg viewBox="0 0 16 16" className="size-3.5" fill="none" stroke="currentColor" strokeWidth={1.6}>
+            <circle cx="8" cy="8" r="6.5" />
+            <path d="M8 7v4M8 4.8v.1" strokeLinecap="round" />
+          </svg>
+          v{__APP_VERSION__}
+          {updater.status.kind === "available" && (
+            <span className="rounded bg-add px-1.5 font-semibold text-white">Update {updater.status.version}</span>
+          )}
+        </button>
+        <About
+          open={aboutOpen}
+          onClose={() => setAboutOpen(false)}
+          update={updater.status}
+          onCheck={updater.check}
+          onInstall={updater.install}
+        />
+        <UpdateToast status={updater.status} onInstall={updater.install} />
       </header>
 
       {!comparing ? (
@@ -211,6 +239,20 @@ export default function App() {
                       <input type="checkbox" checked={changesOnly} onChange={(e) => setChangesOnly(e.target.checked)} />
                       Show differences only
                     </label>
+                    <p
+                      className="flex flex-wrap gap-x-3 text-[11px] text-muted"
+                      title="Each row counts every change inside it, so a row equals the sum of its children"
+                    >
+                      <span>
+                        <span className="font-mono text-add">+</span> only in B
+                      </span>
+                      <span>
+                        <span className="font-mono text-del">−</span> only in A
+                      </span>
+                      <span>
+                        <span className="font-mono text-mod">~</span> changed / moved
+                      </span>
+                    </p>
                   </div>
                   <div className="min-h-0 flex-1 overflow-auto">
                     <TreeNav
@@ -219,6 +261,7 @@ export default function App() {
                       expanded={expanded}
                       changesOnly={changesOnly}
                       query={query}
+                      showSecrets={showSecrets}
                       onSelect={(id) => select(id)}
                       onToggle={toggle}
                     />
@@ -228,7 +271,7 @@ export default function App() {
                   {trail ? (
                     <Detail key={selected.id} trail={trail} focusId={selected.focus} options={options} onSelect={(id) => select(id)} />
                   ) : (
-                    <Overview root={result.root} onOpen={select} />
+                    <Overview root={result.root} options={options} onOpen={select} />
                   )}
                 </main>
               </div>

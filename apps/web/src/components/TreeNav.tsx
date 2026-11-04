@@ -1,7 +1,7 @@
 import type { DiffNode } from "@twincheck/core";
 import { useMemo } from "react";
-import { total, visibleIds } from "../lib/tree";
-import { Counts, StatusDot } from "./Status";
+import { displayLabel, total, visibleIds } from "../lib/tree";
+import { Counts, FolderIcon, StatusDot } from "./Status";
 
 interface Props {
   root: DiffNode;
@@ -9,11 +9,12 @@ interface Props {
   expanded: Set<string>;
   changesOnly: boolean;
   query: string;
+  showSecrets: boolean;
   onSelect: (id: string) => void;
   onToggle: (id: string) => void;
 }
 
-export function TreeNav({ root, selectedId, expanded, changesOnly, query, onSelect, onToggle }: Props) {
+export function TreeNav({ root, selectedId, expanded, changesOnly, query, showSecrets, onSelect, onToggle }: Props) {
   const visible = useMemo(() => visibleIds(root, changesOnly, query), [root, changesOnly, query]);
   const forceOpen = query.trim() !== "";
 
@@ -26,10 +27,10 @@ export function TreeNav({ root, selectedId, expanded, changesOnly, query, onSele
         <div
           className={`flex cursor-pointer items-center gap-1.5 rounded py-1 pr-2 text-sm hover:bg-surface-2 ${
             selectedId === n.id ? "bg-surface-2 font-semibold" : ""
-          }`}
+          } ${depth === 0 ? "mt-1" : ""}`}
           style={{ paddingLeft: depth * 14 + 4 }}
           onClick={() => onSelect(n.id)}
-          title={`${n.kind}: ${n.label}`}
+          title={`${n.kind}: ${displayLabel(n, showSecrets)}`}
         >
           <button
             type="button"
@@ -44,9 +45,20 @@ export function TreeNav({ root, selectedId, expanded, changesOnly, query, onSele
               <path d="M6 3l5 5-5 5z" />
             </svg>
           </button>
-          <StatusDot status={n.status} />
-          <span className="min-w-0 flex-1 truncate">{n.label}</span>
-          {n.status === "modified" && total(n.stats) > 0 && <Counts stats={n.stats} />}
+          {depth === 0 ? <FolderIcon /> : <StatusDot status={n.status} />}
+          <span className={`min-w-0 flex-1 truncate ${depth === 0 ? "font-semibold" : ""}`}>
+            {displayLabel(n, showSecrets)}
+          </span>
+          {total(n.stats) > 0 && (
+            <Counts
+              stats={n.stats}
+              title={
+                n.status === "modified"
+                  ? "All changes inside, at any depth: only in B / only in A / changed or moved"
+                  : `Only in ${n.status === "added" ? "B" : "A"}: counts as one change, including everything inside`
+              }
+            />
+          )}
         </div>
         {open && kids.length > 0 && <ul>{kids.map((c) => row(c, depth + 1))}</ul>}
       </li>
