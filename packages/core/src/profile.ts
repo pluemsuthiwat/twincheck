@@ -14,6 +14,8 @@ export interface ElementRule {
   kind?: string;
   /** Attributes left out of the comparison for this element, e.g. instance-specific IDs. */
   ignoreAttrs?: (n: TNode) => string[];
+  /** Attributes holding a comma-separated list, e.g. a NAD group's `members`. */
+  listAttrs?: string[];
 }
 
 export interface Profile {
@@ -33,6 +35,7 @@ export interface ResolvedRule {
   label?: (n: TNode, pos: number) => string;
   kind?: string;
   ignoreAttrs?: (n: TNode) => string[];
+  listAttrs?: string[];
 }
 
 const SECRET_NAME = /(^|[-_.])(password|passwd|secret|private_?key)$/i;
@@ -73,6 +76,10 @@ export class CompiledProfile {
   comparableAttrs(n: TNode, path: string): string[] {
     const skip = this.rule(path).ignoreAttrs?.(n) ?? [];
     return Object.keys(n.attrs).filter((k) => !skip.includes(k) && !this.ignored(attrPath(path, k)));
+  }
+
+  list(path: string, attr: string): boolean {
+    return this.rule(path).listAttrs?.includes(attr) ?? false;
   }
 
   secret(n: TNode, attr: string): boolean {

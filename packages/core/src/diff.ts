@@ -85,6 +85,7 @@ class DiffEngine {
         [side]: it.node.attrs[name],
         status,
         secret: this.cp.secret(it.node, name) || undefined,
+        list: this.cp.list(it.path, name) || undefined,
       })),
       text: text === undefined ? undefined : { [side]: text, status },
       children: items.map((c) => this.snapshot(c, status, childId(id, c, `${side}${c.idx}`))),
@@ -108,7 +109,7 @@ class DiffEngine {
       const status: DiffStatus =
         av === undefined ? "added" : bv === undefined ? "removed" : av === bv ? "unchanged" : "modified";
       const secret = this.cp.secret(a.node, name) || this.cp.secret(b.node, name);
-      return { name, a: av, b: bv, status, secret: secret || undefined };
+      return { name, a: av, b: bv, status, secret: secret || undefined, list: this.cp.list(a.path, name) || undefined };
     });
   }
 

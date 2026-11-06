@@ -15,6 +15,8 @@ export interface AttrDiff {
   status: DiffStatus;
   /** Value should be masked when displayed. */
   secret?: boolean;
+  /** Value is a comma-separated list (e.g. a group's members), shown one entry per line. */
+  list?: boolean;
 }
 
 export interface DiffStats {

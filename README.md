@@ -41,7 +41,7 @@ pnpm build      # apps/web/dist (static, เปิดได้โดยไม่
 | attribute ของ element และลูกแบบ `name`/`value` (เช่น NVPair ของ Auth Source) | ตาราง `Field \| A \| B` เรียงตามลำดับใน XML ค่าที่ไม่เปลี่ยนซ่อนไว้ใต้ "Show unchanged fields" |
 | list ของข้อความ (`<string>` ใน AuthMethodNameList ฯลฯ) | ตาราง `# \| A \| B` แถวละรายการ |
 | list ของรายการบรรทัดเดียว (เงื่อนไข, ผลลัพธ์, attribute ของ profile) | ตาราง `# \| A \| B` แต่ละช่องแสดง field (type / name / operator / value) field ที่เปลี่ยนเป็นตัวหนา |
-| list ที่ลำดับมีผล (RuleList) | ตาราง `# \| A \| B` แถวละ Rule สรุปเป็น `IF <เงื่อนไข> THEN <ผลลัพธ์>` กดแถวเพื่อดู Rule ทั้งข้อ |
+| list ที่ลำดับมีผล (RuleList) | ตาราง `# \| A \| B` แถวละ Rule: เงื่อนไขแต่ละข้อเป็น field (type / name / operator / value) คั่นด้วย AND/OR แล้วตามด้วย `THEN` ชื่อผลลัพธ์ (เช่น Role, Enforcement-Profile) อยู่คอลัมน์ค่า ส่วนรายการบรรทัดละตัวมี `#1`, `#2` อยู่คอลัมน์ซ้ายใต้ THEN แถวแสดงครบทั้งข้อจึงไม่มีปุ่มกาง ถึงจะมี Rule เดียวก็ยังเป็นตาราง |
 | element ห่อที่ไม่มีชื่อ (Policy, RuleList, AttributeList, ResultList) | หัวข้อเล็กในกล่องแม่ ไม่ใช่กล่องแยก |
 | object อื่น | กล่องซ้อน |
 

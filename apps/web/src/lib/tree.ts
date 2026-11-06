@@ -132,6 +132,63 @@ export function unnumbered(label: string, kind: string): string {
   return label.startsWith(`${kind} `) ? label.replace(/^\S+ \d+: /, "") : label;
 }
 
+/** One side of an entry: everything in it except what exists only on the other side. */
+function onSide(n: DiffNode, side: "a" | "b"): DiffNode[] {
+  return n.children.filter((c) => c.status !== (side === "a" ? "added" : "removed"));
+}
+
+export interface RuleParts {
+  /** Conditions in document order, joined by `joiner` ("AND" / "OR"). */
+  conditions: DiffNode[];
+  joiner: string;
+  results: DiffNode[];
+}
+
+/**
+ * One side of a rule split into its conditions and results (found by kind, at any depth), so a
+ * rule row lists each condition's fields and then what the rule sets. Undefined when the entry
+ * has neither, e.g. a list entry that is not a rule.
+ */
+export function ruleParts(n: DiffNode, side: "a" | "b"): RuleParts | undefined {
+  const conditions: DiffNode[] = [];
+  const results: DiffNode[] = [];
+  let joiner = "AND";
+  const walk = (x: DiffNode) => {
+    for (const c of onSide(x, side)) {
+      // Leaves only: a <Condition> wrapper element has that kind too.
+      if (c.children.length === 0 && c.kind === "Condition") conditions.push(c);
+      else if (c.children.length === 0 && c.kind === "Result") results.push(c);
+      else {
+        const op = c.attrs.find((a) => a.name === "operator")?.[side];
+        if (op?.toUpperCase() === "OR") joiner = "OR";
+        walk(c);
+      }
+    }
+  };
+  walk(n);
+  return conditions.length + results.length > 0 ? { conditions, joiner, results } : undefined;
+}
+
+/**
+ * One side of a rule result as what it sets and its items, one per line:
+ * `Enforcement-Profile = "Tar-1010-network, Palo Alto User-ID"` (value "3002,3015") gives two
+ * items. The display value is split only when its parts match the raw IDs one for one, so a name
+ * that itself contains ", " stays whole; without raw IDs (ignored by the profile) it is split as is.
+ */
+export function resultItems(n: DiffNode, side: "a" | "b"): { name: string; items: string[] } {
+  const get = (k: string) => n.attrs.find((x) => x.name === k)?.[side];
+  const raw = get("value");
+  const shown = get("displayValue") ?? raw ?? "";
+  const parts = shown.split(", ");
+  const fits = raw === undefined || raw.split(",").length === parts.length;
+  return { name: get("name") ?? n.label, items: fits ? parts : [shown] };
+}
+
+/** Entries of a list field value: "a, b, c" → ["a", "b", "c"]. */
+export function listItems(v: string | undefined): string[] {
+  return (v ?? "").split(",").map((x) => x.trim()).filter((x) => x !== "");
+}
+
 export interface EntryField {
   name: string;
   value: string;

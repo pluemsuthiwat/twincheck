@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { diffTrees, type Profile, type TNode } from "@twincheck/core";
-import { displayLabel, entryFields, entryRows, fieldRows, groupChanges, innerPath, isEntryList, isNameValuePair, isOrderedList, isTextList, moveText, pairRow, positionText, unnumbered } from "../src/lib/tree";
+import { displayLabel, entryFields, entryRows, fieldRows, groupChanges, innerPath, isEntryList, isNameValuePair, isOrderedList, isTextList, listItems, moveText, pairRow, positionText, resultItems, ruleParts, unnumbered } from "../src/lib/tree";
 
 const el = (name: string, attrs: Record<string, string> = {}, ...children: TNode[]): TNode => ({ name, attrs, children });
 
@@ -160,5 +160,55 @@ describe("overview helpers", () => {
       "name=Role",
       "value=Lab_User",
     ]);
+  });
+
+  it("splits each side of a rule into its conditions and results, skipping the <Condition> wrapper", () => {
+    const kinds: Profile = {
+      id: "k",
+      name: "k",
+      rules: [
+        { match: "**/Rule", ordered: true, label: (n, ord) => `Rule ${ord}` },
+        { match: "**/RuleAttribute", kind: "Condition", label: (n) => n.attrs.name },
+        { match: "**/RuleResult", kind: "Result", label: (n) => n.attrs.value },
+      ],
+    };
+    const rule = (...attrs: string[]) =>
+      el(
+        "List",
+        {},
+        el(
+          "Rule",
+          {},
+          el("Condition", {}, el("Expression", { operator: "OR" }, ...attrs.map((name) => el("RuleAttribute", { name })))),
+          el("RuleResult", { name: "Role", value: "Lab" }),
+        ),
+      );
+    const r = diffTrees(rule("AP-Name"), rule("AP-Name", "SSID"), kinds).children[0];
+    const side = (s: "a" | "b") => {
+      const p = ruleParts(r, s)!;
+      return [p.conditions.map((c) => c.label).join(` ${p.joiner} `), p.results.map((c) => c.label).join()];
+    };
+    expect(side("a")).toEqual(["AP-Name", "Lab"]);
+    expect(side("b")).toEqual(["AP-Name OR SSID", "Lab"]);
+    expect(ruleParts(diffTrees(el("L", {}, el("x")), el("L", {}, el("x")), kinds), "a")).toBeUndefined();
+  });
+
+  it("splits a list field into its entries", () => {
+    expect(listItems("192.168.225.121, 192.168.225.123,192.168.225.125")).toEqual(["192.168.225.121", "192.168.225.123", "192.168.225.125"]);
+    expect(listItems("")).toEqual([]);
+  });
+
+  it("lists a result's items one per line when they match its raw IDs", () => {
+    const res = (value: string, displayValue: string) => {
+      const r = el("R", {}, el("RuleResult", { type: "Tips", name: "Enforcement-Profile", value, displayValue }));
+      return resultItems(diffTrees(r, r, profile).children[0], "b");
+    };
+    expect(res("3002,3015", "Tar-1010-network, Palo Alto User-ID")).toEqual({
+      name: "Enforcement-Profile",
+      items: ["Tar-1010-network", "Palo Alto User-ID"],
+    });
+    expect(res("7", "Allow, then log").items).toEqual(["Allow, then log"]);
+    const noIds = el("R", {}, el("RuleResult", { name: "Enforcement-Profile", displayValue: "[Allow Access Profile], Palo Alto User-ID" }));
+    expect(resultItems(diffTrees(noIds, noIds, profile).children[0], "a").items).toEqual(["[Allow Access Profile]", "Palo Alto User-ID"]);
   });
 });

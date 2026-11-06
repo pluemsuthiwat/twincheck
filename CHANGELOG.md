@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### หน้าความแตกต่าง
+- แถว Rule ใน RuleList (Enforcement Policy, Role Mapping) แสดงเงื่อนไขแต่ละข้อเป็น field type / name / operator / value คั่นด้วย AND/OR แล้วตามด้วย `THEN` กับ Enforcement-Profile / Role แสดง profile บรรทัดละตัวมีเลข `#1`, `#2` แทนบรรทัด `IF … THEN …`
+- Rule / เงื่อนไข / attribute ที่เปลี่ยน ไฮไลต์เฉพาะค่าที่เปลี่ยน (A แดง, B เขียว) ไม่ทาสีทั้งช่อง ส่วนที่มีแค่ฝั่งเดียวยังทาสีทั้งช่องเหมือนเดิม
+- แถว Rule ไม่มีปุ่มกางแล้ว เพราะแถวแสดงครบทั้งข้อ กดจาก Overview จะเลื่อนไปที่แถวนั้นและตีกรอบให้
+- Role Mapping / Enforcement Policy: หัวข้อ Policy อยู่บนสุด ครอบ field ของ object (dftRoleName, name, …) และตาราง Rule ไม่มีหัวข้อ RuleList แยก field ทั้งหมดเรียงตามลำดับใน XML
+- field ที่เป็นรายการคั่นด้วยคอมมา (เช่น `members` ของ NAD Group) แสดงบรรทัดละรายการมี `#1`, `#2` ไฮไลต์เฉพาะรายการที่มีแค่ฝั่งเดียว ส่วนหน้า Overview แสดงเฉพาะรายการที่ออกไป → เข้ามา
+- RuleList ที่มี Rule เดียวก็แสดงเป็นตาราง `# | A | B` เหมือนที่มีหลาย Rule
+
 ## 1.0.0 — 2026-11-05
 
 เวอร์ชันแรกที่ออกเป็นแอป desktop

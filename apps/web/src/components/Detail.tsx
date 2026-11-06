@@ -11,9 +11,12 @@ import {
   isNameValuePair,
   isOrderedList,
   isTextList,
+  listItems,
   moveText,
   pairRow,
   positionText,
+  resultItems,
+  ruleParts,
   total,
   unnumbered,
   type EntryRow,
@@ -229,6 +232,22 @@ function ChangeLine({
 /** "field: old → new" with old/new in the remove/add colors. */
 function FieldChange({ row, options }: { row: FieldRow; options: ViewOptions }) {
   const masked = row.secret && !options.showSecrets;
+  if (row.list && !masked && row.a !== undefined && row.b !== undefined) {
+    // A list says which entries left and which came in, not the whole list twice.
+    const a = listItems(row.a);
+    const b = listItems(row.b);
+    const gone = a.filter((x) => !b.includes(x));
+    const added = b.filter((x) => !a.includes(x));
+    return (
+      <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs">
+        <span className="font-mono text-muted">{row.name}</span>
+        {gone.length > 0 ? gone.map((x) => <Pill key={x} v={x} side="a" />) : <span className="text-muted italic">none</span>}
+        <span className="text-muted">→</span>
+        {added.length > 0 ? added.map((x) => <Pill key={x} v={x} side="b" />) : <span className="text-muted italic">none</span>}
+        {gone.length + added.length === 0 && <span className="text-mod">(order changed)</span>}
+      </span>
+    );
+  }
   return (
     <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs">
       <span className="font-mono text-muted">{row.name}</span>
@@ -290,7 +309,9 @@ const passThrough = (n: DiffNode) =>
   n.text === undefined &&
   n.children.length === 1 &&
   !isNameValuePair(n.children[0]) &&
-  !isEntryList(n);
+  !isEntryList(n) &&
+  // A rule list keeps its # | A | B table even with a single rule.
+  !isOrderedList(n);
 
 function NodeBlock({
   node,
@@ -300,6 +321,7 @@ function NodeBlock({
   via = [],
   section,
   whole,
+  bare,
 }: {
   node: DiffNode;
   depth: number;
@@ -311,6 +333,8 @@ function NodeBlock({
   section?: boolean;
   /** Show everything inside, changed or not: an entry unfolded from a list row reads as a whole (conditions and result). */
   whole?: boolean;
+  /** A wrapper whose caption the parent already shows above its own fields (see `headed`). */
+  bare?: boolean;
 }) {
   // Whole added/removed subtrees start folded: their header already says "Only in A/B".
   const [open, setOpen] = useState(whole || depth === 0 || node.status === "modified" || focusId === node.id);
@@ -337,6 +361,16 @@ function NodeBlock({
   const kids = options.changesOnly && !showSame && node.status === "modified" ? changed : boxes;
   const focused = focusId === node.id || via.some((v) => v.id === focusId);
   const hasFields = node.attrs.length > 0 || node.text !== undefined || pairs.length > 0;
+  const fieldTable = hasFields && <FieldTable node={node} pairs={pairs} focusId={focusId} options={options} />;
+  // An object whose only part is a policy wrapper (Role Mapping, Enforcement Policy → Policy → rules)
+  // reads as one section, as in ClearPass: the "Policy" caption heads the object's fields and the rules.
+  const headed =
+    !section &&
+    hasFields &&
+    boxes.length === 1 &&
+    kids.length === 1 &&
+    isWrapper(kids[0]) &&
+    kids[0].children.some(isOrderedList);
 
   // Only boxes with something inside get a chevron, so opening one never shows an empty body.
   const expandable = hasFields || list || rules || boxes.length > 0;
@@ -379,12 +413,13 @@ function NodeBlock({
           <span className="font-semibold">{node.pos!.b}</span> in B
         </p>
       )}
-      {hasFields && <FieldTable node={node} pairs={pairs} focusId={focusId} options={options} />}
+      {headed && <Caption node={kids[0]} via={[]} />}
+      {fieldTable}
       {(list || rules) && <EntryTable node={node} depth={depth} focusId={focusId} options={options} />}
       {kids.length > 0 && (
         <div className="space-y-2">
           {kids.map((c) => (
-            <NodeBlock key={c.id} node={c} depth={depth + 1} focusId={focusId} options={options} whole={whole} />
+            <NodeBlock key={c.id} node={c} depth={depth + 1} focusId={focusId} options={options} whole={whole} bare={headed} />
           ))}
         </div>
       )}
@@ -398,13 +433,18 @@ function NodeBlock({
 
   // A wrapper without a name of its own (Policy, RuleList, AttributeList, ResultList, ...) is not
   // a box: a small caption, then its content inline in the parent box.
-  if (depth > 0 && !section && node.label === node.name && !node.pos) {
+  if (depth > 0 && !section && isWrapper(node)) {
+    // A bare rule list (RuleList) needs no caption of its own: its table sits under the parent's (Policy).
+    if (bare || (rules && !hasFields && via.length === 0)) {
+      return (
+        <div id={`node-${node.id}`} className={focused ? "rounded ring-2 ring-accent/40" : ""}>
+          {content}
+        </div>
+      );
+    }
     return (
       <div id={`node-${node.id}`} className={`space-y-1.5 ${focused ? "rounded ring-2 ring-accent/40" : ""}`}>
-        <div className="flex items-center gap-2 border-b border-line pb-0.5 text-xs font-semibold text-muted">
-          <span className="min-w-0 flex-1">{[...via, node].map((v) => v.name).join(" › ")}</span>
-          {node.status === "modified" && <Counts stats={node.stats} />}
-        </div>
+        <Caption node={node} via={via} />
         {content}
       </div>
     );
@@ -421,6 +461,18 @@ function NodeBlock({
     >
       {header}
       {body}
+    </div>
+  );
+}
+
+/** A node without a name of its own (Policy, RuleList, AttributeList, ...): shown as a caption, not a box. */
+const isWrapper = (n: DiffNode) => n.label === n.name && !n.pos;
+
+function Caption({ node, via }: { node: DiffNode; via: DiffNode[] }) {
+  return (
+    <div className="flex items-center gap-2 border-b border-line pb-0.5 text-xs font-semibold text-muted">
+      <span className="min-w-0 flex-1">{[...via, node].map((v) => v.name).join(" › ")}</span>
+      {node.status === "modified" && <Counts stats={node.stats} />}
     </div>
   );
 }
@@ -477,33 +529,74 @@ function EntryTable({
       return next;
     });
   // One-line entries with fields (conditions, results, profile attributes) list their fields,
-  // like a Field table; rules (entries with parts) show their IF … THEN summary.
+  // like a Field table; rules list each condition's fields, then THEN and what they set.
   const fielded = !textList && node.children.every((c) => c.children.length === 0);
+  // A changed entry marks only what changed (A red, B green), not its whole cell.
+  const mark = (on: boolean, s: "a" | "b") => (on ? `rounded px-1 -mx-1 ${s === "a" ? "bg-del-bg" : "bg-add-bg"}` : "");
+  const fieldRows = (c: DiffNode, s: "a" | "b") =>
+    entryFields(c, s).map((f) => (
+      <Fragment key={f.name}>
+        <dt className="font-mono text-muted">{f.name}</dt>
+        <dd className={`font-mono break-all ${mark(c.status !== "unchanged" && f.changed, s)}`}>
+          {f.secret && !options.showSecrets ? "••••••" : f.value === "" ? <span className="text-muted italic">(empty)</span> : f.value}
+        </dd>
+      </Fragment>
+    ));
+  const grid = "grid grid-cols-[auto_1fr] gap-x-3";
   const text = (c: DiffNode | undefined, s: "a" | "b") => {
     if (!c) return undefined;
     if (textList) return c.text?.[s];
-    if (fielded) {
-      return (
-        <dl className="grid grid-cols-[auto_1fr] gap-x-3">
-          {entryFields(c, s).map((f) => (
-            <Fragment key={f.name}>
-              <dt className="font-mono text-muted">{f.name}</dt>
-              <dd className={`font-mono break-all ${c.status === "modified" && f.changed ? "font-semibold" : ""}`}>
-                {f.secret && !options.showSecrets ? "••••••" : f.value === "" ? <span className="text-muted italic">(empty)</span> : f.value}
-              </dd>
+    if (fielded) return <dl className={grid}>{fieldRows(c, s)}</dl>;
+    const parts = ruleParts(c, s);
+    if (!parts) return unnumbered(displayLabel(c, options.showSecrets, s), c.kind);
+    // One grid for the whole rule: keywords and #n on the left, values, the result name and its items on the right.
+    const keyword = (k: string) => <dt className="mt-1 font-mono text-muted">{k}</dt>;
+    return (
+      <dl className={grid}>
+        {parts.conditions.length === 0 && (
+          <>
+            {keyword("IF")}
+            <dd className="mt-1 font-mono text-muted">(always)</dd>
+          </>
+        )}
+        {parts.conditions.map((x, i) => (
+          <Fragment key={x.id}>
+            {i > 0 && (
+              <>
+                {keyword(parts.joiner)}
+                <dd />
+              </>
+            )}
+            {fieldRows(x, s)}
+          </Fragment>
+        ))}
+        {parts.results.map((x, i) => {
+          const r = resultItems(x, s);
+          const other = x.status === "modified" ? resultItems(x, s === "a" ? "b" : "a").items : [];
+          const masked = !options.showSecrets && x.attrs.some((a) => a.secret);
+          return (
+            <Fragment key={x.id}>
+              {keyword(i === 0 ? "THEN" : "")}
+              <dd className="mt-1 font-mono text-muted">{r.name}</dd>
+              {(masked ? ["••••••"] : r.items).map((v, n) => (
+                <Fragment key={n}>
+                  <dt className="font-mono text-muted">#{n + 1}</dt>
+                  <dd className={`font-mono break-all ${mark(x.status !== "unchanged" && other[n] !== r.items[n], s)}`}>{v}</dd>
+                </Fragment>
+              ))}
             </Fragment>
-          ))}
-        </dl>
-      );
-    }
-    return unnumbered(displayLabel(c, options.showSecrets, s), c.kind);
+          );
+        })}
+      </dl>
+    );
   };
   // Changed content (not just a new position).
   const content = (c?: DiffNode) => c?.status === "modified" && total(c.stats) - (c.moved ? 1 : 0) > 0;
   const cellColor = (c: DiffNode | undefined, aligned: boolean, s: "a" | "b") => {
     if (!c) return "";
     if (c.status === (s === "a" ? "removed" : "added")) return s === "a" ? "bg-del-bg" : "bg-add-bg";
-    if (content(c)) return s === "a" ? "bg-del-bg" : "bg-add-bg";
+    // Text entries change as a whole; entries with fields mark their changed fields instead.
+    if (content(c) && textList) return s === "a" ? "bg-del-bg" : "bg-add-bg";
     return aligned && !c.moved ? "" : "bg-mod-bg";
   };
 
@@ -547,7 +640,11 @@ function EntryTable({
               ) : null;
             };
             const details = [...new Set([r.a, r.b])].filter((c): c is DiffNode => c !== undefined);
-            const focused = focusId !== undefined && (r.a?.id === focusId || r.b?.id === focusId);
+            // A row that already shows the whole entry (text, fields, or a rule's conditions and results)
+            // has nothing more to unfold; a change inside it focuses the row itself.
+            const complete = textList || fielded || details.every((c) => ruleParts(c, c.status === "removed" ? "a" : "b"));
+            const within = complete && details.some(inside);
+            const focused = focusId !== undefined && (r.a?.id === focusId || r.b?.id === focusId || within);
             return (
               <Fragment key={k}>
                 <tr
@@ -555,7 +652,8 @@ function EntryTable({
                   className={`align-top ${focused ? "outline-2 -outline-offset-2 outline-accent" : ""}`}
                 >
                   <td className="py-1 pr-2 pl-1">
-                    {textList || fielded ? (
+                    {within && <span id={`node-${focusId}`} />}
+                    {complete ? (
                       label
                     ) : (
                       <button
@@ -582,7 +680,7 @@ function EntryTable({
                     {text(r.b, "b")}
                   </td>
                 </tr>
-                {isOpen && (
+                {isOpen && !complete && (
                   <tr>
                     <td colSpan={3} className="space-y-2 pt-1 pb-2">
                       {details.map((c) => (
@@ -650,6 +748,8 @@ function FieldTable({
             {shown.map((r) => {
               const masked = r.secret && !options.showSecrets;
               const mod = r.status === "modified";
+              // A list marks only the entries missing on the other side, not the whole cell.
+              const list = r.list && !masked;
               return (
                 <tr
                   key={r.id ?? r.name}
@@ -661,11 +761,11 @@ function FieldTable({
                   <td className="truncate py-1 pr-2 pl-1 font-mono text-xs text-muted" title={r.name}>
                     {r.name}
                   </td>
-                  <td className={`px-2 py-1 ${mod ? "bg-del-bg" : ""}`}>
-                    <Value v={r.a} raw={r.raw?.a} secret={masked} />
+                  <td className={`px-2 py-1 ${mod && !list ? "bg-del-bg" : ""}`}>
+                    {list && r.a !== undefined ? <ListValue v={r.a} other={r.b} side="a" /> : <Value v={r.a} raw={r.raw?.a} secret={masked} />}
                   </td>
-                  <td className={`px-2 py-1 ${mod ? "bg-add-bg" : ""}`}>
-                    <Value v={r.b} raw={r.raw?.b} secret={masked} />
+                  <td className={`px-2 py-1 ${mod && !list ? "bg-add-bg" : ""}`}>
+                    {list && r.b !== undefined ? <ListValue v={r.b} other={r.a} side="b" /> : <Value v={r.b} raw={r.raw?.b} secret={masked} />}
                     {masked && mod && <span className="ml-1 text-xs text-mod">(values differ)</span>}
                   </td>
                 </tr>
@@ -680,6 +780,24 @@ function FieldTable({
         </button>
       )}
     </div>
+  );
+}
+
+/** A list field as "#1 entry" lines; entries not on the other side are marked (A red, B green). */
+function ListValue({ v, other, side }: { v: string; other?: string; side: "a" | "b" }) {
+  const items = listItems(v);
+  // Without the other side (a field only here) the row color already says it all.
+  const theirs = other === undefined ? items : listItems(other);
+  if (items.length === 0) return <span className="text-xs text-muted italic">(empty)</span>;
+  return (
+    <dl className="grid grid-cols-[auto_1fr] gap-x-3 font-mono text-xs">
+      {items.map((x, i) => (
+        <Fragment key={i}>
+          <dt className="text-muted">#{i + 1}</dt>
+          <dd className={`break-all ${theirs.includes(x) ? "" : `-mx-1 rounded px-1 ${side === "a" ? "bg-del-bg" : "bg-add-bg"}`}`}>{x}</dd>
+        </Fragment>
+      ))}
+    </dl>
   );
 }
 

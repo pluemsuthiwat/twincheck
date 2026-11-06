@@ -62,4 +62,12 @@ describe("ClearPass profile", () => {
     const extra = b.filter((l, i) => l !== a[i]);
     expect(extra.join("\n")).toContain('value="q123"');
   });
+
+  it("marks a NAD group's members as a list field", () => {
+    const tips = (members: string) =>
+      parseXml(`<TipsContents><NadGroups><NadGroup members="${members}" name="G" description=""/></NadGroups></TipsContents>`);
+    const group = diffTrees(tips("10.0.0.1, 10.0.0.2"), tips("10.0.0.1, 10.0.0.3"), clearpassProfile).children[0].children[0];
+    expect(group.attrs.find((a) => a.name === "members")).toMatchObject({ status: "modified", list: true });
+    expect(group.attrs.find((a) => a.name === "description")?.list).toBeUndefined();
+  });
 });

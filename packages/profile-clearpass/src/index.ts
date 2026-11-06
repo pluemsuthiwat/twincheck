@@ -64,6 +64,7 @@ const rules: ElementRule[] = [
   ]),
   { match: `${ROOT}/TagDictionaries/TagDictionary`, key: (n) => `${attr(n, "entityName")}.${attr(n, "attributeName")}`, label: (n) => `${attr(n, "entityName")}.${attr(n, "attributeName")}` },
   { match: `${ROOT}/ContextServers/ContextServer`, key: (n) => `${attr(n, "type")}:${attr(n, "server")}`, label: (n) => `${attr(n, "server")} (${attr(n, "type")})` },
+  { match: `${ROOT}/NadGroups/NadGroup`, listAttrs: ["members"] },
   { match: `${ROOT}/ContextServerActions/ContextServerAction`, key: (n) => `${attr(n, "type")}:${attr(n, "action")}`, label: (n) => `${attr(n, "action")} (${attr(n, "type")})` },
 
   // Rule lists are evaluated in order (first-applicable / evaluate-all), so position matters.
