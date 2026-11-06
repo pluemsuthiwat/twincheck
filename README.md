@@ -1,83 +1,87 @@
 # TwinCheck
 
-เปรียบเทียบไฟล์ config สองไฟล์ตามความหมาย (semantic diff) เริ่มจาก XML / Aruba ClearPass Policy Manager export
-ประมวลผลใน browser ทั้งหมด ไม่มีการส่งไฟล์ออกจากเครื่อง
+Compare two configuration files by meaning (semantic diff), starting with XML / Aruba ClearPass Policy Manager exports.
+Everything is processed locally; no file ever leaves your machine.
 
-## ใช้งาน
+## Usage
 
 ```sh
 pnpm install
-pnpm dev        # เปิด desktop app (Tauri)
-pnpm web:dev    # รันแบบเว็บที่ http://localhost:5173
+pnpm dev        # open the desktop app (Tauri)
+pnpm web:dev    # run in the browser at http://localhost:5173
 pnpm test       # unit tests (core, ClearPass profile, UI helpers)
 pnpm typecheck
-pnpm build      # apps/web/dist (static, เปิดได้โดยไม่ต้องมี server)
+pnpm build      # apps/web/dist (static, opens without a server)
 ```
 
-## โครงสร้าง
+## Layout
 
-| Package | หน้าที่ |
+| Package | Purpose |
 |---|---|
-| `packages/core` | Tree diff engine กลาง: จับคู่ object ด้วย key, LCS สำหรับ list ที่ลำดับมีผล, canonicalize, Profile |
-| `packages/format-xml` | แปลง XML เป็น tree กลาง (`parseXml`) และกลับเป็น XML (`serializeXml`) |
-| `packages/profile-clearpass` | กฎเฉพาะ ClearPass: หมวด, key ของแต่ละ object, Rule แบบ ordered, ข้าม `exportTime` และ internal ID |
-| `apps/web` | React + Vite + Tailwind UI, diff รันใน Web Worker, Monaco สำหรับ Raw XML |
-| `apps/desktop` | Tauri 2 shell ของ `apps/web` + updater (เช็กอัปเดตจาก GitHub Releases) |
-| `fixtures/clearpass` | ไฟล์ export ตัวอย่างสำหรับ test |
+| `packages/core` | Format-neutral tree diff engine: matches objects by key, LCS for order-sensitive lists, canonicalize, Profile |
+| `packages/format-xml` | Converts XML to the shared tree (`parseXml`) and back to XML (`serializeXml`) |
+| `packages/profile-clearpass` | ClearPass rules: categories, each object's key, ordered Rules, skips `exportTime` and internal IDs |
+| `apps/web` | React + Vite + Tailwind UI, diff runs in a Web Worker, Monaco for Raw XML |
+| `apps/desktop` | Tauri 2 shell around `apps/web` + updater (checks GitHub Releases for updates) |
+| `fixtures/clearpass` | Sample exports for tests |
 
-## อ่านหน้าความแตกต่าง
+## Reading the diff view
 
-**ตัวเลข `+N −N ~N`** (sidebar, หัวหมวด, หัวจอ) นับ "จุดที่เปลี่ยน" ทุกชั้นข้างใน เลขของแถวแม่ = ผลรวมของแถวลูก
-- `+` มีแค่ใน B (เพิ่มทั้งก้อนนับ 1) · `−` มีแค่ใน A · `~` แก้ค่าหรือย้ายตำแหน่ง (แก้หลาย field ใน element เดียวนับ 1)
-- ยอดรวมที่หัวจอ = "All differences" ในหน้า Overview
+**The `+N −N ~N` counts** (sidebar, category headers, top bar) count every change point inside; a parent's count is the sum of its children's.
+- `+` only in B (an added block counts as 1) · `−` only in A · `~` changed value or moved position (several changed fields in one element count as 1)
+- The total in the top bar equals "All differences" on the Overview page
 
-**สี** ใช้กติกาเดียวทุกตาราง: ช่อง A แดง = ค่าเดิม / มีแค่ใน A · ช่อง B เขียว = ค่าใหม่ / มีแค่ใน B · เหลือง = สลับตำแหน่ง
-หัวหมวดใหญ่ใช้ไอคอนโฟลเดอร์สีน้ำเงิน ไม่ใช้สีสถานะ
+**Colors** follow one rule in every table: A cell red = old value / only in A · B cell green = new value / only in B · amber = moved.
+A changed entry with fields highlights only the values that changed; the whole cell is colored only when the entry exists on one side.
+Categories use a blue folder icon, not a status color.
 
-**มาตรฐานการแสดงผล** (ใช้กับทุก object ไม่ผูกกับชื่อ element)
+**Display standard** (applies to every object, not tied to element names)
 
-| ข้อมูลใน XML | แสดงเป็น |
+| Data in the XML | Shown as |
 |---|---|
-| attribute ของ element และลูกแบบ `name`/`value` (เช่น NVPair ของ Auth Source) | ตาราง `Field \| A \| B` เรียงตามลำดับใน XML ค่าที่ไม่เปลี่ยนซ่อนไว้ใต้ "Show unchanged fields" |
-| list ของข้อความ (`<string>` ใน AuthMethodNameList ฯลฯ) | ตาราง `# \| A \| B` แถวละรายการ |
-| list ของรายการบรรทัดเดียว (เงื่อนไข, ผลลัพธ์, attribute ของ profile) | ตาราง `# \| A \| B` แต่ละช่องแสดง field (type / name / operator / value) field ที่เปลี่ยนเป็นตัวหนา |
-| list ที่ลำดับมีผล (RuleList) | ตาราง `# \| A \| B` แถวละ Rule: เงื่อนไขแต่ละข้อเป็น field (type / name / operator / value) คั่นด้วย AND/OR แล้วตามด้วย `THEN` ชื่อผลลัพธ์ (เช่น Role, Enforcement-Profile) อยู่คอลัมน์ค่า ส่วนรายการบรรทัดละตัวมี `#1`, `#2` อยู่คอลัมน์ซ้ายใต้ THEN แถวแสดงครบทั้งข้อจึงไม่มีปุ่มกาง ถึงจะมี Rule เดียวก็ยังเป็นตาราง |
-| element ห่อที่ไม่มีชื่อ (Policy, RuleList, AttributeList, ResultList) | หัวข้อเล็กในกล่องแม่ ไม่ใช่กล่องแยก |
-| object อื่น | กล่องซ้อน |
+| An element's attributes and `name`/`value` children (e.g. an Auth Source's NVPairs) | A `Field \| A \| B` table in XML order; unchanged values are folded under "Show unchanged fields" |
+| A list of text values (`<string>` in AuthMethodNameList, …) | A `# \| A \| B` table, one row per item |
+| A list of one-line entries (conditions, results, profile attributes) | A `# \| A \| B` table; each cell shows the fields (type / name / operator / value) |
+| An order-sensitive list (RuleList) | A `# \| A \| B` table, one row per Rule: each condition as fields (type / name / operator / value) joined by AND/OR, then `THEN` with the result name (e.g. Role, Enforcement-Profile) in the value column and one `#1`, `#2` item per line under it. Rows show the whole rule, so they have no expand button; a single Rule is still a table |
+| A comma-separated list field (e.g. a Device Group's `members`) | One `#1`, `#2` item per line, marking only items missing on the other side |
+| Unnamed wrappers (Policy, RuleList, AttributeList, ResultList) | A caption inside the parent box, not a separate box |
+| Any other object | A nested box |
 
-**list ที่ลำดับมีผล:** ถ้าแค่สลับลำดับหรือเพิ่ม/ลบที่ท้าย แถว #n คือรายการลำดับที่ n ของแต่ละไฟล์ (สลับจะเห็นไขว้กัน `1|2, 2|1`)
-ถ้าเพิ่ม/ลบตรงกลาง รายการเดียวกันอยู่แถวเดียวกัน เพื่อไม่ให้แถวหลังจากนั้นเหลื่อมทั้งหมด
+**Order-sensitive lists:** when entries were only swapped, or added/removed at the end, row #n is the n-th entry of each file (a swap reads crosswise, `1|2, 2|1`).
+When entries are added or removed in the middle, the same entry stays on one row so the rows after it don't all shift.
 
-## เพิ่ม format / profile ใหม่
+## Adding a format / profile
 
-- **Format ใหม่** (JSON, YAML, …): เขียน adapter ที่คืน `TNode` เหมือน `format-xml` แล้วใช้ engine เดิมได้ทันที
-- **Profile ใหม่**: สร้าง `Profile` ที่มี `detect`, `ignore`, `rules` (`key`, `ordered`, `label`, `kind`, `ignoreAttrs`) แล้วเพิ่มเข้า `PROFILES` ใน `apps/web/src/engine.ts`
+- **New format** (JSON, YAML, …): write an adapter that returns a `TNode` like `format-xml` does; the existing engine works with it as is
+- **New profile**: create a `Profile` with `detect`, `ignore`, `rules` (`key`, `ordered`, `label`, `kind`, `ignoreAttrs`, `listAttrs`, `leadAttrs`) and add it to `PROFILES` in `apps/web/src/engine.ts`
 
-## ออกเวอร์ชันใหม่ / อัปเดตอัตโนมัติ
+## Releasing / auto-update
 
-แอป desktop เช็กอัปเดตจาก GitHub Releases ตอนเปิดแอป (เงียบๆ) และเมื่อกด **Check for updates** ในหน้า About
-ไฟล์อัปเดตต้องมีลายเซ็นตรงกับ `pubkey` ใน `tauri.conf.json` ถึงจะติดตั้งได้
+The desktop app checks GitHub Releases for updates when it starts (silently) and when you click **Check for updates** in the About dialog.
+An update installs only if its signature matches the `pubkey` in `tauri.conf.json`.
 
-ตั้งค่าครั้งเดียว (repo ต้องเป็น public):
-- GitHub → Settings → Secrets and variables → Actions → เพิ่ม `TAURI_SIGNING_PRIVATE_KEY` (เนื้อหาไฟล์ `~/.tauri/twincheck.key`) และ `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` (เว้นว่าง)
-- **สำรอง `~/.tauri/twincheck.key` ไว้ให้ดี** ถ้าหาย แอปที่ติดตั้งไปแล้วจะรับอัปเดตใหม่ไม่ได้
+One-time setup (the repo must be public):
+- GitHub → Settings → Secrets and variables → Actions:
+  - `TAURI_SIGNING_PRIVATE_KEY` (contents of `~/.tauri/twincheck.key`); `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` only if the key has a password
+  - macOS signing and notarization: `APPLE_CERTIFICATE` (base64 of the Developer ID Application `.p12`), `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_TEAM_ID`, `APPLE_ID`, `APPLE_PASSWORD` (app-specific password), `KEYCHAIN_PASSWORD` (any value)
+- **Back up `~/.tauri/twincheck.key`.** If it is lost, installed apps can no longer accept new updates.
 
-ทุกครั้งที่ออกเวอร์ชัน:
+For every release:
 
 ```sh
-npm version minor --no-git-tag-version    # แก้ "version" ใน package.json ที่ root
+npm version minor --no-git-tag-version    # bumps "version" in the root package.json
 git commit -am "Release v1.1.0"
 git tag v1.1.0 && git push && git push --tags
 ```
 
-Workflow `.github/workflows/release.yml` จะ build macOS (Apple Silicon + Intel) และ Windows แล้วสร้าง **draft release**
-กด Publish ใน GitHub Releases เมื่อพร้อม แอปที่ติดตั้งไว้จะเห็นอัปเดตหลังจากนั้น
+The `.github/workflows/release.yml` workflow builds macOS (Apple Silicon + Intel, signed and notarized) and Windows, then creates a **draft release**.
+Publish it in GitHub Releases when ready; installed apps see the update after that.
 
-## หมายเหตุด้านความปลอดภัย
+## Security notes
 
-ไฟล์ ClearPass export มี secret แบบ plaintext (Proxy secret, LDAP bind password, privateKeyPassword ฯลฯ)
-UI จะ mask ไว้เป็นค่าเริ่มต้น ส่วนไฟล์ใน `fixtures/` เป็นข้อมูลจาก lab ควรลบหรือแทน secret ก่อน push ขึ้น repo สาธารณะ
+ClearPass exports contain plaintext secrets (Proxy secret, LDAP bind password, privateKeyPassword, SNMP community strings, …).
+The UI masks them by default. The files in `fixtures/` come from a lab and have their secrets replaced with `REDACTED`; do the same before committing any new export.
 
 ## License
 
-MIT — ดู [LICENSE](LICENSE)
+MIT — see [LICENSE](LICENSE)

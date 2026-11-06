@@ -2,41 +2,40 @@
 
 ## 1.0.0 — 2026-11-06
 
-เวอร์ชันแรกที่ออกเป็นแอป desktop
+First release as a desktop app.
 
-### หน้าความแตกต่าง
-- หน้า Overview จัดเป็นหมวด → Changed / Only in B / Only in A → การ์ดละ object พร้อมค่า `เดิม → ใหม่` ในบรรทัดเดียว กล่องตัวเลขด้านบนกดเป็นตัวกรองได้
-- ตาราง `Field | A | B` และ `# | A | B` แบบเดียวกันทุกที่ (ดูมาตรฐานใน README หัวข้อ "อ่านหน้าความแตกต่าง")
-- Auth Source: ค่า NVPair (timeout, server, port, …) รวมเป็นตาราง A | B ตารางเดียว
-- Auth Method / Auth Source / Authorization Source ใน service: ตาราง A | B แถวละรายการ
-- เงื่อนไข ผลลัพธ์ และ attribute ของ profile แสดงเป็น field (type / name / operator / value)
-- Rule ที่สลับลำดับแสดงตามตำแหน่งจริงของแต่ละไฟล์ (ไขว้กัน) และทำสีเหลือง
-- เงื่อนไขแสดงที่มาของค่า เช่น `Authorization:PLUEM-ZNC-AD:memberOf`, `Endpoint:Zone`
-- เงื่อนไขของ Rule ใช้ชื่อ "Rule Condition (MATCHES_ALL)" เหมือน "Service Rule (MATCHES_ALL)" ของ service
-- element ห่อที่ไม่มีชื่อเป็นหัวข้อเล็ก ไม่ซ้อนเป็นกล่อง
-- field เรียงตามลำดับใน XML (ยกเว้น Device Group ที่ `name`, `description` ขึ้นก่อนเหมือนฟอร์มใน ClearPass)
-- หัวหมวดใหญ่ใช้ไอคอนโฟลเดอร์สีน้ำเงิน แยกจากสีสถานะ; ไม่มีแถบสีด้านซ้ายของกล่อง
-- ค่า secret ที่ฝังอยู่ในชื่อรายการถูก mask ด้วย (sidebar, Overview, รายละเอียด)
-- แถว Rule ใน RuleList (Enforcement Policy, Role Mapping) แสดงเงื่อนไขแต่ละข้อเป็น field type / name / operator / value คั่นด้วย AND/OR แล้วตามด้วย `THEN` กับ Enforcement-Profile / Role แสดง profile บรรทัดละตัวมีเลข `#1`, `#2` แทนบรรทัด `IF … THEN …`
-- Rule / เงื่อนไข / attribute ที่เปลี่ยน ไฮไลต์เฉพาะค่าที่เปลี่ยน (A แดง, B เขียว) ไม่ทาสีทั้งช่อง ส่วนที่มีแค่ฝั่งเดียวยังทาสีทั้งช่องเหมือนเดิม
-- แถว Rule ไม่มีปุ่มกางแล้ว เพราะแถวแสดงครบทั้งข้อ กดจาก Overview จะเลื่อนไปที่แถวนั้นและตีกรอบให้
-- Role Mapping / Enforcement Policy: หัวข้อ Policy อยู่บนสุด ครอบ field ของ object (dftRoleName, name, …) และตาราง Rule ไม่มีหัวข้อ RuleList แยก field ทั้งหมดเรียงตามลำดับใน XML
-- field ที่เป็นรายการคั่นด้วยคอมมา (เช่น `members` ของ NAD Group) แสดงบรรทัดละรายการมี `#1`, `#2` ไฮไลต์เฉพาะรายการที่มีแค่ฝั่งเดียว ส่วนหน้า Overview แสดงเฉพาะรายการที่ออกไป → เข้ามา
-- RuleList ที่มี Rule เดียวก็แสดงเป็นตาราง `# | A | B` เหมือนที่มีหลาย Rule
-- Network Devices (`NadClients`) และ Network Device Groups (`NadGroups`) มีชื่อหมวดเหมือนใน ClearPass แทนชื่อ tag ใน XML
-- SNMP `communityString` (และ field ชื่อ `community`) ถูกซ่อนเป็น `••••••` เหมือนรหัสผ่าน ทั้งในหน้าความแตกต่างและ Raw XML
+### Diff view
+- Overview groups changes by category → Changed / Only in B / Only in A, one card per object with `old → new` inline; the summary cards at the top act as filters
+- One display standard everywhere: `Field | A | B` and `# | A | B` tables (see "Reading the diff view" in the README)
+- Auth Source: NVPair values (timeout, server, port, …) form a single A | B table
+- Auth Methods / Auth Sources / Authorization Sources in a service: an A | B table, one row per item
+- Conditions, results and profile attributes show as fields (type / name / operator / value)
+- Conditions show where a value comes from, e.g. `Authorization:PLUEM-ZNC-AD:memberOf`, `Endpoint:Zone`
+- Rule rows in a RuleList (Enforcement Policy, Role Mapping) show each condition as type / name / operator / value fields joined by AND/OR, then `THEN` with the Enforcement-Profile / Role and one `#1`, `#2` item per line; rows show the whole rule, and a single Rule is still a `# | A | B` table
+- Clicking a rule in the Overview scrolls to its row and outlines it
+- A changed rule, condition or attribute highlights only the values that changed (A red, B green); entries on one side only are colored as a whole
+- Swapped rules line up by their position in each file (crosswise) and are marked amber
+- A rule's conditions are named "Rule Condition (MATCHES_ALL)", like a service's "Service Rule (MATCHES_ALL)"
+- Role Mapping / Enforcement Policy read as one "Policy" section: the object's fields (dftRoleName, name, …) and then the rule table, with no separate RuleList caption
+- Unnamed wrapper elements render as captions instead of nested boxes
+- Fields keep their XML order (except Device Groups, which show `name` and `description` first, as in ClearPass)
+- Comma-separated list fields (e.g. a Device Group's `members`) show one `#1`, `#2` item per line, marking only items missing on the other side; the Overview lists removed → added items
+- Network Devices (`NadClients`) and Network Device Groups (`NadGroups`) use ClearPass's names instead of the XML tag names
+- Categories use a blue folder icon, separate from status colors; boxes have no colored side bars
+- Secrets are masked by default, including values embedded in entry names (sidebar, Overview, details) and SNMP community strings, in both the diff view and Raw XML
 
-### การนับและ engine
-- ตัวเลข `+ − ~` ทุกที่นับแบบเดียวกัน: จุดที่เปลี่ยนทุกชั้นข้างใน แถวแม่ = ผลรวมแถวลูก, แถว Only in A/B แสดง `−1`/`+1`
-- แก้หลาย field ใน element เดียว (เช่น `value` + `displayValue`) นับเป็น 1
-- Rule ที่แค่ย้ายตำแหน่งตรวจเป็น "Moved" แทนลบแล้วเพิ่ม
-- engine เก็บชื่อฝั่ง A (`labelA`) เมื่อต่างจากฝั่ง B
+### Counting and engine
+- `+ − ~` counts work the same everywhere: every change point inside, a parent equals the sum of its children, Only in A/B rows show `−1` / `+1`
+- Several changed fields in one element (e.g. `value` + `displayValue`) count as 1
+- Rules that only moved are detected as "Moved", not removed + added
+- The engine keeps A's name (`labelA`) when it differs from B's
+- Profiles can declare comma-separated list fields (`listAttrs`) and fields shown first (`leadAttrs`)
 
-### แอป
-- `npm run dev` / `pnpm dev` เปิดแอป desktop (Tauri); โหมดเว็บย้ายไป `pnpm web:dev`
-- เลขเวอร์ชันเก็บที่ `package.json` ที่ root ที่เดียว (หน้าแอปและตัวติดตั้งอ่านจากที่นี่)
-- หน้า About: เวอร์ชัน, copyright, ข้อความ MIT License ฉบับเต็ม, ปุ่ม Check for updates
-- เช็กอัปเดตอัตโนมัติจาก GitHub Releases (Tauri updater, ไฟล์อัปเดตต้องมีลายเซ็น) พร้อมกล่องแจ้งเตือน "Update & restart"
-- GitHub Actions `release.yml`: push tag `v*` → build macOS + Windows → draft release พร้อม `latest.json`
-- แอป macOS sign ด้วย Developer ID และผ่าน notarization ของ Apple (Windows ยังไม่ได้ sign)
+### App
+- `npm run dev` / `pnpm dev` opens the desktop app (Tauri); the browser version is `pnpm web:dev`
+- The version lives in the root `package.json` only (the app and installers read it from there)
+- About dialog: version, copyright, full MIT License text, Check for updates
+- Automatic update checks against GitHub Releases (Tauri updater, signed update files) with an "Update & restart" prompt
+- GitHub Actions `release.yml`: push a `v*` tag → build macOS + Windows → draft release with `latest.json`
+- The macOS app is signed with a Developer ID and notarized by Apple (the Windows installer is not signed yet)
 - MIT License
