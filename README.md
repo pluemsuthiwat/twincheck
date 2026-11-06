@@ -61,9 +61,8 @@ The desktop app checks GitHub Releases for updates when it starts (silently) and
 An update installs only if its signature matches the `pubkey` in `tauri.conf.json`.
 
 One-time setup (the repo must be public):
-- GitHub → Settings → Secrets and variables → Actions:
-  - `TAURI_SIGNING_PRIVATE_KEY` (contents of `~/.tauri/twincheck.key`); `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` only if the key has a password
-  - macOS signing and notarization: `APPLE_CERTIFICATE` (base64 of the Developer ID Application `.p12`), `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_TEAM_ID`, `APPLE_ID`, `APPLE_PASSWORD` (app-specific password), `KEYCHAIN_PASSWORD` (any value)
+- GitHub → Settings → Secrets and variables → Actions: `TAURI_SIGNING_PRIVATE_KEY` (contents of `~/.tauri/twincheck.key`); `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` only if the key has a password
+- On the Mac that builds the macOS app: the "Developer ID Application" certificate in the login keychain, the notarization password and Apple ID (see the header of `scripts/release-mac.sh`)
 - **Back up `~/.tauri/twincheck.key`.** If it is lost, installed apps can no longer accept new updates.
 
 For every release:
@@ -72,10 +71,13 @@ For every release:
 npm version minor --no-git-tag-version    # bumps "version" in the root package.json
 git commit -am "Release v1.1.0"
 git tag v1.1.0 && git push && git push --tags
+# wait for the Windows job to create the draft release, then on the Mac:
+scripts/release-mac.sh
 ```
 
-The `.github/workflows/release.yml` workflow builds macOS (Apple Silicon + Intel, signed and notarized) and Windows, then creates a **draft release**.
-Publish it in GitHub Releases when ready; installed apps see the update after that.
+`.github/workflows/release.yml` builds the Windows installer and creates a **draft release** with `latest.json`.
+`scripts/release-mac.sh` builds macOS (Apple Silicon + Intel) on the Mac, signs and notarizes it, and adds it to the same draft and `latest.json`.
+Publish the draft in GitHub Releases when ready; installed apps see the update after that.
 
 ## Security notes
 

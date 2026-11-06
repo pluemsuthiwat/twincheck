@@ -36,6 +36,6 @@ First release as a desktop app.
 - The version lives in the root `package.json` only (the app and installers read it from there)
 - About dialog: version, copyright, full MIT License text, Check for updates
 - Automatic update checks against GitHub Releases (Tauri updater, signed update files) with an "Update & restart" prompt
-- GitHub Actions `release.yml`: push a `v*` tag → build macOS + Windows → draft release with `latest.json`
-- The macOS app is signed with a Developer ID and notarized by Apple (the Windows installer is not signed yet)
+- Releases: a `v*` tag builds the Windows installer in GitHub Actions into a draft release with `latest.json`; `scripts/release-mac.sh` adds the macOS builds
+- The macOS app and .dmg are signed with a Developer ID and notarized by Apple (the Windows installer is not signed yet)
 - MIT License

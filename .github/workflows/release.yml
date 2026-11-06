@@ -1,15 +1,11 @@
-# Builds the desktop app for macOS (Apple Silicon + Intel) and Windows, signs the updater
-# artifacts, and creates a DRAFT GitHub Release with latest.json. Publishing the draft is what
-# makes installed apps see the update (they read releases/latest/download/latest.json).
+# Builds the Windows installer, signs the updater artifacts, and creates a DRAFT GitHub Release
+# with latest.json. The macOS builds are made, signed and notarized on the maintainer's Mac with
+# scripts/release-mac.sh, which adds them to this draft. Publishing the draft is what makes
+# installed apps see the update (they read releases/latest/download/latest.json).
 #
 # Release: bump "version" in the root package.json, commit, then `git tag v1.2.3 && git push --tags`.
 # Secrets: TAURI_SIGNING_PRIVATE_KEY (contents of ~/.tauri/twincheck.key),
-#          TAURI_SIGNING_PRIVATE_KEY_PASSWORD (empty if the key has no password).
-# macOS code signing + notarization (Developer ID Application certificate):
-#          APPLE_CERTIFICATE (base64 of the exported .p12), APPLE_CERTIFICATE_PASSWORD,
-#          APPLE_SIGNING_IDENTITY ("Developer ID Application: Name (TEAMID)"), KEYCHAIN_PASSWORD
-#          (any value, for the runner's temporary keychain), APPLE_ID, APPLE_PASSWORD
-#          (app-specific password), APPLE_TEAM_ID.
+#          TAURI_SIGNING_PRIVATE_KEY_PASSWORD (only if the key has a password).
 name: Release
 
 on:
@@ -22,20 +18,7 @@ permissions:
 
 jobs:
   build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: macos-latest
-            args: --target aarch64-apple-darwin
-            rust-targets: aarch64-apple-darwin
-          - platform: macos-latest
-            args: --target x86_64-apple-darwin
-            rust-targets: x86_64-apple-darwin
-          - platform: windows-latest
-            args: ""
-            rust-targets: ""
-    runs-on: ${{ matrix.platform }}
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -47,8 +30,6 @@ jobs:
           cache: pnpm
 
       - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.rust-targets }}
 
       - uses: swatinem/rust-cache@v2
         with:
@@ -63,17 +44,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: apps/desktop
           tauriScript: pnpm tauri
-          args: ${{ matrix.args }}
           tagName: v__VERSION__
           releaseName: TwinCheck v__VERSION__
           releaseBody: See the assets below to download and install this version.
