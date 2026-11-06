@@ -9,6 +9,11 @@
 - Role Mapping / Enforcement Policy: หัวข้อ Policy อยู่บนสุด ครอบ field ของ object (dftRoleName, name, …) และตาราง Rule ไม่มีหัวข้อ RuleList แยก field ทั้งหมดเรียงตามลำดับใน XML
 - field ที่เป็นรายการคั่นด้วยคอมมา (เช่น `members` ของ NAD Group) แสดงบรรทัดละรายการมี `#1`, `#2` ไฮไลต์เฉพาะรายการที่มีแค่ฝั่งเดียว ส่วนหน้า Overview แสดงเฉพาะรายการที่ออกไป → เข้ามา
 - RuleList ที่มี Rule เดียวก็แสดงเป็นตาราง `# | A | B` เหมือนที่มีหลาย Rule
+- Network Devices (`NadClients`) และ Network Device Groups (`NadGroups`) มีชื่อหมวดเหมือนใน ClearPass แทนชื่อ tag ใน XML
+- Device Group แสดง `name` และ `description` ก่อน `membersFormat` / `members` เหมือนฟอร์มใน ClearPass (profile กำหนดได้ผ่าน `leadAttrs` field อื่นยังเรียงตาม XML)
+
+### ความลับ
+- SNMP `communityString` (และ field ชื่อ `community`) ถูกซ่อนเป็น `••••••` เหมือนรหัสผ่าน ทั้งในหน้าความแตกต่างและ Raw XML
 
 ## 1.0.0 — 2026-11-05
 

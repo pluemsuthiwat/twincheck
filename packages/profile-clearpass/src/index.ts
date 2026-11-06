@@ -24,6 +24,8 @@ const CATEGORIES: [string, string, string, string][] = [
   ["RadiusCOATemplates", "RadiusCOATemplate", "RADIUS CoA Templates", "CoA Template"],
   ["ContextServers", "ContextServer", "Endpoint Context Servers", "Context Server"],
   ["ContextServerActions", "ContextServerAction", "Context Server Actions", "Server Action"],
+  ["NadClients", "NadClient", "Network Devices", "Network Device"],
+  ["NadGroups", "NadGroup", "Network Device Groups", "Device Group"],
 ];
 
 const ROOT = "TipsContents";
@@ -64,7 +66,8 @@ const rules: ElementRule[] = [
   ]),
   { match: `${ROOT}/TagDictionaries/TagDictionary`, key: (n) => `${attr(n, "entityName")}.${attr(n, "attributeName")}`, label: (n) => `${attr(n, "entityName")}.${attr(n, "attributeName")}` },
   { match: `${ROOT}/ContextServers/ContextServer`, key: (n) => `${attr(n, "type")}:${attr(n, "server")}`, label: (n) => `${attr(n, "server")} (${attr(n, "type")})` },
-  { match: `${ROOT}/NadGroups/NadGroup`, listAttrs: ["members"] },
+  // ClearPass's Device Group form opens with Name and Description; the XML puts them last.
+  { match: `${ROOT}/NadGroups/NadGroup`, listAttrs: ["members"], leadAttrs: ["name", "description"] },
   { match: `${ROOT}/ContextServerActions/ContextServerAction`, key: (n) => `${attr(n, "type")}:${attr(n, "action")}`, label: (n) => `${attr(n, "action")} (${attr(n, "type")})` },
 
   // Rule lists are evaluated in order (first-applicable / evaluate-all), so position matters.

@@ -16,6 +16,8 @@ export interface ElementRule {
   ignoreAttrs?: (n: TNode) => string[];
   /** Attributes holding a comma-separated list, e.g. a NAD group's `members`. */
   listAttrs?: string[];
+  /** Attributes shown first, in this order, ahead of the rest in document order (e.g. `name`, `description`). */
+  leadAttrs?: string[];
 }
 
 export interface Profile {
@@ -36,12 +38,13 @@ export interface ResolvedRule {
   kind?: string;
   ignoreAttrs?: (n: TNode) => string[];
   listAttrs?: string[];
+  leadAttrs?: string[];
 }
 
-const SECRET_NAME = /(^|[-_.])(password|passwd|secret|private_?key)$/i;
-const SECRET_CAMEL = /[a-z](Password|Passwd|Secret|PrivateKey)$/;
+const SECRET_NAME = /(^|[-_.])(password|passwd|secret|private_?key|community(_?string)?)$/i;
+const SECRET_CAMEL = /[a-z](Password|Passwd|Secret|PrivateKey|CommunityString)$/;
 
-/** Name heuristics for secret fields: `password`, `client_secret`, `privateKeyPassword`, ... */
+/** Name heuristics for secret fields: `password`, `client_secret`, `privateKeyPassword`, SNMP `communityString`, ... */
 export function looksSecret(name: string): boolean {
   return SECRET_NAME.test(name) || SECRET_CAMEL.test(name);
 }
@@ -72,10 +75,13 @@ export class CompiledProfile {
     return this.ignorePatterns.some((re) => re.test(path));
   }
 
-  /** Attributes that take part in the comparison, in document order. */
+  /** Attributes that take part in the comparison: the rule's `leadAttrs` first, then document order. */
   comparableAttrs(n: TNode, path: string): string[] {
-    const skip = this.rule(path).ignoreAttrs?.(n) ?? [];
-    return Object.keys(n.attrs).filter((k) => !skip.includes(k) && !this.ignored(attrPath(path, k)));
+    const rule = this.rule(path);
+    const skip = rule.ignoreAttrs?.(n) ?? [];
+    const lead = (rule.leadAttrs ?? []).filter((k) => k in n.attrs);
+    const names = [...lead, ...Object.keys(n.attrs).filter((k) => !lead.includes(k))];
+    return names.filter((k) => !skip.includes(k) && !this.ignored(attrPath(path, k)));
   }
 
   list(path: string, attr: string): boolean {

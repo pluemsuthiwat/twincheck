@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canonicalize, collectChanges, diffTrees, type Profile, type TNode } from "../src";
+import { canonicalize, collectChanges, diffTrees, looksSecret, type Profile, type TNode } from "../src";
 
 const el = (name: string, attrs: Record<string, string> = {}, ...children: (TNode | string)[]): TNode => {
   const text = children.find((c): c is string => typeof c === "string");
@@ -119,6 +119,17 @@ describe("diffTrees", () => {
     const d = diffTrees(a, a, plain);
     const secrets = d.children.flatMap((c) => c.attrs.filter((x) => x.secret).map((x) => `${c.name}@${x.name}`));
     expect(secrets).toEqual(["Proxy@secret", "NVPair@value"]);
+  });
+
+  it("lists a rule's leadAttrs first, then the rest in document order", () => {
+    const p: Profile = { id: "t", name: "t", rules: [{ match: "**/Group", leadAttrs: ["name", "description"] }] };
+    const a = el("Root", {}, el("Group", { format: "list", members: "x", name: "g", description: "d" }));
+    expect(diffTrees(a, a, p).children[0].attrs.map((x) => x.name)).toEqual(["name", "description", "format", "members"]);
+  });
+
+  it("treats SNMP community strings as secrets", () => {
+    for (const name of ["communityString", "community", "snmp_community", "readCommunityString"]) expect(looksSecret(name)).toBe(true);
+    expect(looksSecret("communityName")).toBe(false);
   });
 });
 
